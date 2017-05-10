@@ -7,6 +7,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +34,7 @@ public class RichEditText extends RecyclerView {
     private RichAdapter mAdapter;
     private List<ViewHolder> savedViewHolders;
     private SelectionInfo selectionInfo;
+    private LinearLayoutManager mLayoutManager;
 
     public RichEditText(Context context) {
         super(context);
@@ -56,7 +58,8 @@ public class RichEditText extends RecyclerView {
 
         savedViewHolders = new ArrayList<>();
 
-        setLayoutManager(new LinearLayoutManager(context));
+        mLayoutManager = new LinearLayoutManager(context);
+        setLayoutManager(mLayoutManager);
         mAdapter = new RichAdapter(mItems);
         setAdapter(mAdapter);
 
@@ -85,6 +88,9 @@ public class RichEditText extends RecyclerView {
         selectionInfo = new SelectionInfo();
     }
 
+    /**
+     * 获取有焦点的输入框的位置及其光标位置
+     */
     private void getFocusedEditTextPosition() {
         for (ViewHolder holder : savedViewHolders) {
             if (holder instanceof RichAdapter.TextViewHolder) {
@@ -194,7 +200,6 @@ public class RichEditText extends RecyclerView {
             splitItem.setContent(splitContent);
             mItems.add(position + 1, splitItem);
         }
-        selectionInfo.imagePosition = imagePosition;
         //添加图片
         RichItem item = new RichItem();
         item.setImageUrl(imageFile);
@@ -219,7 +224,6 @@ public class RichEditText extends RecyclerView {
     private static class SelectionInfo {
         int editTextPosition;//光标对应的EditText在adapter的位置
         int selection;//光标所在的位置
-        int imagePosition;//图片所在的位置
     }
 
     private static class RichItem {
@@ -323,12 +327,44 @@ public class RichEditText extends RecyclerView {
                         item.setContent(s);
                     }
                 });
+                mEditText.setOnKeyListener(new OnKeyListener() {
+                    @Override
+                    public boolean onKey(View v, int keyCode, KeyEvent event) {
+                        if (event.getAction() == KeyEvent.ACTION_DOWN
+                                && event.getKeyCode() == KeyEvent.KEYCODE_DEL) {
+                            int startSelection = mEditText.getSelectionStart();
+                            // 只有在光标已经顶到文本输入框的最前方，在判定是否删除之前的图片，或两个View合并
+                            if (startSelection == 0) {
+                                int position = getAdapterPosition();
+                                if (position != 0) {
+                                    View preView = mLayoutManager.findViewByPosition(position - 1);
+                                    ViewHolder preHolder = getChildViewHolder(preView);
+                                    if (preHolder instanceof ImageViewHolder) {
+                                        mItems.remove(position - 1);
+                                        selectionInfo.editTextPosition = position - 1;
+                                        selectionInfo.selection = 0;
+                                        notifyDataSetChanged();
+                                    } else {
+                                        RichItem preItem = mItems.get(position - 1);
+                                        CharSequence content = preItem.getContent();
+                                        preItem.setContent(content.toString() + item.getContent().toString());
+                                        mItems.remove(position);
+                                        selectionInfo.editTextPosition = position - 1;
+                                        selectionInfo.selection = content.length();
+                                        notifyDataSetChanged();
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                });
                 mEditText.setText(item.getContent());
                 mTextView.setText(item.getContent());
 
-                if (getAdapterPosition() == selectionInfo.imagePosition + 1) {
+                if (getAdapterPosition() == selectionInfo.editTextPosition) {
                     mEditText.requestFocus();
-                    mEditText.setSelection(0);
+                    mEditText.setSelection(selectionInfo.selection);
                 }
             }
 
