@@ -60,4 +60,5 @@ public class TextWatchEditText extends EditText implements TextWatcher {
     public interface OnTextChangedListener {
         void onTextChanged(CharSequence s, int start, int before, int count);
     }
+
 }

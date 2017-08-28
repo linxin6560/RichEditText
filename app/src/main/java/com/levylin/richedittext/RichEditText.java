@@ -11,7 +11,6 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import com.facebook.drawee.view.SimpleDraweeView;
@@ -82,26 +81,18 @@ public class RichEditText extends RecyclerView {
         setRecyclerListener(new RecyclerListener() {
             @Override
             public void onViewRecycled(ViewHolder holder) {
+                System.out.println("holder=" + holder);
                 savedViewHolders.remove(holder);
+                if (holder instanceof RichAdapter.TextViewHolder) {
+                    RichAdapter.TextViewHolder textViewHolder = (RichAdapter.TextViewHolder) holder;
+                    RichItem item = textViewHolder.getRichItem();
+                    if (item.equals(selectionInfo.focusItem)) {
+                        selectionInfo.selection = textViewHolder.getEditText().getSelectionEnd();
+                    }
+                }
             }
         });
         selectionInfo = new SelectionInfo();
-    }
-
-    /**
-     * 获取有焦点的输入框的位置及其光标位置
-     */
-    private void getFocusedEditTextPosition() {
-        for (ViewHolder holder : savedViewHolders) {
-            if (holder instanceof RichAdapter.TextViewHolder) {
-                EditText editText = ((RichAdapter.TextViewHolder) holder).getEditText();
-                if (editText.isFocused()) {
-                    selectionInfo.editTextPosition = holder.getAdapterPosition();
-                    selectionInfo.selection = editText.getSelectionEnd();
-                    break;
-                }
-            }
-        }
     }
 
     private void setIsStartDragged(boolean isStartDragged) {
@@ -173,12 +164,11 @@ public class RichEditText extends RecyclerView {
      */
     public void addImage(String imageFile) {
 
-        getFocusedEditTextPosition();
-        int position = selectionInfo.editTextPosition;
         int selection = selectionInfo.selection;
         int imagePosition;
         //EditText获取到焦点的对象
-        RichItem focusedItem = mItems.get(position);
+        RichItem focusedItem = selectionInfo.focusItem;
+        int position = mItems.indexOf(focusedItem);
         CharSequence focusedContent = focusedItem.getContent();
 
         System.out.println("selection=" + selection + ",focusedContent.length()=" + focusedContent.length());
@@ -222,7 +212,7 @@ public class RichEditText extends RecyclerView {
      * 光标位置信息
      */
     private static class SelectionInfo {
-        int editTextPosition;//光标对应的EditText在adapter的位置
+        RichItem focusItem;//光标对应的EditText在adapter的位置
         int selection;//光标所在的位置
     }
 
@@ -252,6 +242,15 @@ public class RichEditText extends RecyclerView {
 
         public String getImageUrl() {
             return imageUrl;
+        }
+
+        @Override
+        public String toString() {
+            return "RichItem{" +
+                    "itemType=" + itemType +
+                    ", content=" + content +
+                    ", imageUrl='" + imageUrl + '\'' +
+                    '}';
         }
 
         public static RichItem makeEmpty() {
@@ -312,6 +311,7 @@ public class RichEditText extends RecyclerView {
 
             private TextWatchEditText mEditText;
             private TextView mTextView;
+            private RichItem richItem;
 
             public TextViewHolder(View itemView) {
                 super(itemView);
@@ -321,6 +321,15 @@ public class RichEditText extends RecyclerView {
 
             @Override
             public void bind(final RichItem item) {
+                richItem = item;
+                mEditText.setOnFocusChangeListener(new OnFocusChangeListener() {
+                    @Override
+                    public void onFocusChange(View v, boolean hasFocus) {
+                        if (hasFocus) {
+                            selectionInfo.focusItem = item;
+                        }
+                    }
+                });
                 mEditText.setOnTextChangedListener(new TextWatchEditText.OnTextChangedListener() {
                     @Override
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -341,7 +350,7 @@ public class RichEditText extends RecyclerView {
                                     ViewHolder preHolder = getChildViewHolder(preView);
                                     if (preHolder instanceof ImageViewHolder) {
                                         mItems.remove(position - 1);
-                                        selectionInfo.editTextPosition = position - 1;
+                                        selectionInfo.focusItem = item;
                                         selectionInfo.selection = 0;
                                         notifyDataSetChanged();
                                     } else {
@@ -349,7 +358,7 @@ public class RichEditText extends RecyclerView {
                                         CharSequence content = preItem.getContent();
                                         preItem.setContent(content.toString() + item.getContent().toString());
                                         mItems.remove(position);
-                                        selectionInfo.editTextPosition = position - 1;
+                                        selectionInfo.focusItem = preItem;
                                         selectionInfo.selection = content.length();
                                         notifyDataSetChanged();
                                     }
@@ -362,10 +371,14 @@ public class RichEditText extends RecyclerView {
                 mEditText.setText(item.getContent());
                 mTextView.setText(item.getContent());
 
-                if (getAdapterPosition() == selectionInfo.editTextPosition) {
+                if (item.equals(selectionInfo.focusItem)) {
                     mEditText.requestFocus();
                     mEditText.setSelection(selectionInfo.selection);
                 }
+            }
+
+            public RichItem getRichItem() {
+                return richItem;
             }
 
             @Override
