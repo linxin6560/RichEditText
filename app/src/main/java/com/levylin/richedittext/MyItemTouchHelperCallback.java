@@ -4,13 +4,13 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 
 /**
+ * 拖动帮助类回调
  * Created by huangyuxiang on 2017/4/26.
  */
-
-public class MyItemTouchHelperCallback extends ItemTouchHelper.Callback {
+class MyItemTouchHelperCallback extends ItemTouchHelper.Callback {
     private OnMoveListener mOnMoveListener;
 
-    public MyItemTouchHelperCallback(OnMoveListener moveListener){
+    MyItemTouchHelperCallback(OnMoveListener moveListener) {
         this.mOnMoveListener = moveListener;
     }
 
@@ -21,7 +21,7 @@ public class MyItemTouchHelperCallback extends ItemTouchHelper.Callback {
 
     @Override
     public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-        if(mOnMoveListener != null){
+        if (mOnMoveListener != null) {
             return mOnMoveListener.onMove(viewHolder.getAdapterPosition(), target.getAdapterPosition());
         }
         return false;
@@ -42,15 +42,16 @@ public class MyItemTouchHelperCallback extends ItemTouchHelper.Callback {
         return false;
     }
 
-    public interface OnMoveListener{
+    interface OnMoveListener {
         boolean onMove(int srcPosition, int targetPosition);
+
         void onClearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder);
     }
 
     @Override
     public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
         super.clearView(recyclerView, viewHolder);
-        if(mOnMoveListener != null){
+        if (mOnMoveListener != null) {
             mOnMoveListener.onClearView(recyclerView, viewHolder);
         }
     }

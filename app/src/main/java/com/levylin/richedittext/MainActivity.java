@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.add_image_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mEditText.addImage("https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1493975269090&di=66147b5d4252a4db217cefa9d3225564&imgtype=0&src=http%3A%2F%2Fh5.86.cc%2Fwalls%2F20141217%2F1440x900_23b73a6904487a6.jpg");
+                mEditText.addImage(RichEditText.TEST_IMAGE);
             }
         });
 
